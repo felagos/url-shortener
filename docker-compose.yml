@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  url-shortener-mongodb:
+    image: mongo:latest
+    container_name: url-shortener-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=url_shortener
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
