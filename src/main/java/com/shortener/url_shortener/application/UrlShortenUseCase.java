@@ -1,9 +1,9 @@
 package com.shortener.url_shortener.application;
 
 import com.shortener.url_shortener.domain.model.Url;
+import com.shortener.url_shortener.domain.port.ConfigurationPort;
 import com.shortener.url_shortener.domain.port.HashingServicePort;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -14,15 +14,17 @@ import java.util.Optional;
 @Service
 public class UrlShortenUseCase {
 
-    @Value("${domain-shortener}")
-    private String domainShortener;
-
+    private final String domainShortener;
     private final UrlRepositoryPort urlRepository;
     private final HashingServicePort hashingService;
 
-    public UrlShortenUseCase(UrlRepositoryPort urlRepository, HashingServicePort hashingService) {
+    public UrlShortenUseCase(
+            UrlRepositoryPort urlRepository,
+            HashingServicePort hashingService,
+            ConfigurationPort configurationPort) {
         this.urlRepository = urlRepository;
         this.hashingService = hashingService;
+        this.domainShortener = configurationPort.getString("domain-shortener");
     }
 
     /**
