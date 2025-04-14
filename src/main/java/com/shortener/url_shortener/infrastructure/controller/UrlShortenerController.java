@@ -4,6 +4,7 @@ import com.shortener.url_shortener.application.UrlShortenUseCase;
 import com.shortener.url_shortener.domain.exceptions.UrlNotFoundException;
 import com.shortener.url_shortener.infrastructure.dto.ShortenUrlDto;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -43,7 +44,7 @@ public class UrlShortenerController {
         String originalUrl = urlShortenerService.getOriginalUrl(hash);
         
         RedirectView redirectView = new RedirectView(originalUrl);
-        redirectView.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
+        redirectView.setStatusCode(HttpStatus.PERMANENT_REDIRECT);
         
         return redirectView;
     }
