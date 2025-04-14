@@ -1,4 +1,4 @@
-package com.shortener.url_shortener.domain.model;
+package com.shortener.url_shortener.domain.exceptions;
 
 /**
  * Exception thrown when a requested URL is not found in the repository.

@@ -1,4 +1,4 @@
-package com.shortener.url_shortener.domain.model;
+package com.shortener.url_shortener.domain.exceptions;
 
 public class BaseException extends RuntimeException {
 

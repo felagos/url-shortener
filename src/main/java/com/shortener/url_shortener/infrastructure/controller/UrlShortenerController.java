@@ -1,7 +1,7 @@
 package com.shortener.url_shortener.infrastructure.controller;
 
 import com.shortener.url_shortener.application.UrlShortenUseCase;
-import com.shortener.url_shortener.domain.model.UrlNotFoundException;
+import com.shortener.url_shortener.domain.exceptions.UrlNotFoundException;
 import com.shortener.url_shortener.infrastructure.dto.ShortenUrlDto;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;

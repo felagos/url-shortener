@@ -1,7 +1,7 @@
 package com.shortener.url_shortener.application;
 
 import com.shortener.url_shortener.domain.model.Url;
-import com.shortener.url_shortener.domain.model.UrlNotFoundException;
+import com.shortener.url_shortener.domain.exceptions.UrlNotFoundException;
 import com.shortener.url_shortener.domain.port.ConfigurationPort;
 import com.shortener.url_shortener.domain.port.HashingServicePort;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;

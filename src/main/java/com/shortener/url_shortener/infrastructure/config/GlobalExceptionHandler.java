@@ -1,6 +1,6 @@
 package com.shortener.url_shortener.infrastructure.config;
 
-import com.shortener.url_shortener.domain.model.BaseException;
+import com.shortener.url_shortener.domain.exceptions.BaseException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
