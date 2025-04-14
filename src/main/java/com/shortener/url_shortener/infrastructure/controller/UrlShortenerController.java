@@ -32,15 +32,19 @@ public class UrlShortenerController {
     }
 
     /**
-     * Endpoint to redirect to the original URL.
+     * Endpoint to redirect to the original URL with a 301 (Moved Permanently) status code.
      * 
      * @param hash The hash of the shortened URL
-     * @return A redirect view that sends the user to the original URL
+     * @return A redirect view that sends the user to the original URL with 301 status code
      * @throws UrlNotFoundException if the URL with the given hash is not found
      */
     @GetMapping("/{hash}")
     public RedirectView getOriginalUrl(@PathVariable String hash) {
         String originalUrl = urlShortenerService.getOriginalUrl(hash);
-        return new RedirectView(originalUrl);
+        
+        RedirectView redirectView = new RedirectView(originalUrl);
+        redirectView.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
+        
+        return redirectView;
     }
 }
