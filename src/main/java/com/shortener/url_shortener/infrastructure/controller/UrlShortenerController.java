@@ -44,7 +44,7 @@ public class UrlShortenerController {
         String originalUrl = urlShortenerService.getOriginalUrl(hash);
         
         RedirectView redirectView = new RedirectView(originalUrl);
-        redirectView.setStatusCode(HttpStatus.PERMANENT_REDIRECT);
+        redirectView.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
         
         return redirectView;
     }
