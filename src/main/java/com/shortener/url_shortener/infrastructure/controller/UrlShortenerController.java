@@ -1,12 +1,11 @@
 package com.shortener.url_shortener.infrastructure.controller;
 
 import com.shortener.url_shortener.application.UrlShortenUseCase;
+import com.shortener.url_shortener.domain.model.UrlNotFoundException;
 import com.shortener.url_shortener.infrastructure.dto.ShortenUrlDto;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * REST Controller for URL shortening operations.
@@ -30,5 +29,18 @@ public class UrlShortenerController {
     @PostMapping
     public String shortenUrl(@RequestBody @Valid ShortenUrlDto request) {
         return urlShortenerService.shortenUrl(request.getUrl());
+    }
+
+    /**
+     * Endpoint to redirect to the original URL.
+     * 
+     * @param hash The hash of the shortened URL
+     * @return A redirect view that sends the user to the original URL
+     * @throws UrlNotFoundException if the URL with the given hash is not found
+     */
+    @GetMapping("/{hash}")
+    public RedirectView getOriginalUrl(@PathVariable String hash) {
+        String originalUrl = urlShortenerService.getOriginalUrl(hash);
+        return new RedirectView(originalUrl);
     }
 }

@@ -16,4 +16,6 @@ public interface MongoUrlRepository extends MongoRepository<UrlDocument, String>
      * @return An Optional containing the URL document if found, or empty if not found
      */
     Optional<UrlDocument> findByOriginalUrl(String originalUrl);
+
+    Optional<UrlDocument> findByShortUrl(String shortUrl);
 }

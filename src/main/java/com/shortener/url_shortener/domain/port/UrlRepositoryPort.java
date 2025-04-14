@@ -24,4 +24,6 @@ public interface UrlRepositoryPort {
      * @return An Optional containing the URL if found, or empty if not found
      */
     Optional<Url> findByOriginalUrl(String originalUrl);
+
+    Optional<Url> findByShortUrl(String shortUrl);
 }

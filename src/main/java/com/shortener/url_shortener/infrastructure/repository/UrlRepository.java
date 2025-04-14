@@ -38,4 +38,15 @@ public class UrlRepository implements UrlRepositoryPort {
         return repository.findByOriginalUrl(originalUrl)
                 .map(doc -> new Url(doc.getId(), doc.getOriginalUrl(), doc.getShortUrl()));
     }
+
+    @Override
+    public Optional<Url> findByShortUrl(String shortUrl) {
+        var urlDocument = repository.findByShortUrl(shortUrl);
+
+        if (urlDocument.isPresent()) {
+            return Optional.of(new Url(urlDocument.get().getId(), urlDocument.get().getOriginalUrl(), urlDocument.get().getShortUrl()));
+        }
+
+        return Optional.empty();
+    }
 }
