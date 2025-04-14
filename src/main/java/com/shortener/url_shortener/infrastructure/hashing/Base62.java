@@ -11,7 +11,6 @@ public class Base62 implements IHashing {
         long value = 0;
         for (byte b : bytes) {
             value = (value << 8) | (b & 0xFF);
-            // Prevent overflow for very long strings
             if (value < 0) {
                 value = Math.abs(value);
             }
