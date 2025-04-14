@@ -1,6 +1,6 @@
 package com.shortener.url_shortener.domain.exceptions;
 
-public class BaseException extends RuntimeException {
+public abstract class  BaseException extends RuntimeException {
 
     private int code;
 
