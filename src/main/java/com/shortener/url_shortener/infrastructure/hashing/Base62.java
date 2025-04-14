@@ -7,8 +7,10 @@ public class Base62 implements IHashing {
 
     @Override
     public String hash(String input) {
-        byte[] bytes = input.getBytes();
         long value = 0;
+        var bytes = input.getBytes();
+        var sb = new StringBuilder();
+
         for (byte b : bytes) {
             value = (value << 8) | (b & 0xFF);
             if (value < 0) {
@@ -16,7 +18,6 @@ public class Base62 implements IHashing {
             }
         }
 
-        StringBuilder sb = new StringBuilder();
         do {
             sb.insert(0, CHARSET.charAt((int)(value % BASE)));
             value /= BASE;
