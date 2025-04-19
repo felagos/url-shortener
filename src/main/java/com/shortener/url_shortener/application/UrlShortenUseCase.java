@@ -48,8 +48,9 @@ public class UrlShortenUseCase {
         }
 
         var randomId = idGenerator.generateId(originalUrl, HASH_LENGTH);
-        String hash = hashingService.hash(randomId);
-        Url newUrl = new Url(originalUrl, hash);
+        var hash = hashingService.hash(randomId);
+        var newUrl = new Url(originalUrl, hash);
+
         urlRepository.save(newUrl);
         
         return domainShortener + "/" + hash;
