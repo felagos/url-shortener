@@ -21,8 +21,6 @@ public class UrlShortenUseCase {
     private final HashingServicePort hashingService;
     private final IdGeneratorPort idGenerator;
 
-    private static final Integer HASH_LENGTH = 7;
-
     public UrlShortenUseCase(
             UrlRepositoryPort urlRepository,
             HashingServicePort hashingService,
