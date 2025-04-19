@@ -7,8 +7,7 @@ import org.springframework.stereotype.Service;
 public class IdGenerator implements IdGeneratorPort {
     
     // Snowflake bits allocation
-    private static final long EPOCH = 1672531200000L; // Custom epoch (Jan 1, 2023 UTC)
-    private static final int TIMESTAMP_BITS = 41;
+    private static final long EPOCH = 1672531200000L; // Custom epoch (January 1, 2023)
     private static final int WORKER_ID_BITS = 10;
     private static final int SEQUENCE_BITS = 12;
     
@@ -23,7 +22,6 @@ public class IdGenerator implements IdGeneratorPort {
     private long lastTimestamp = -1L;
     
     public IdGenerator() {
-        // Default constructor, using workerId = 1
         this(1L);
     }
     
@@ -47,28 +45,23 @@ public class IdGenerator implements IdGeneratorPort {
     private synchronized long nextId() {
         long currentTimestamp = getCurrentTimestamp();
         
-        // Handle clock moving backwards
         if (currentTimestamp < lastTimestamp) {
             throw new RuntimeException(
                     String.format("Clock moved backwards. Refusing to generate ID for %d milliseconds",
                             lastTimestamp - currentTimestamp));
         }
         
-        // If same timestamp, increment sequence
         if (currentTimestamp == lastTimestamp) {
             sequence = (sequence + 1) & MAX_SEQUENCE;
-            // Sequence exhausted, wait for next millisecond
             if (sequence == 0) {
                 currentTimestamp = waitForNextMillis(lastTimestamp);
             }
         } else {
-            // Different timestamp, reset sequence
             sequence = 0L;
         }
         
         lastTimestamp = currentTimestamp;
         
-        // Compose the 64-bit ID
         return ((currentTimestamp - EPOCH) << TIMESTAMP_SHIFT) |
                (workerId << WORKER_ID_SHIFT) |
                sequence;
