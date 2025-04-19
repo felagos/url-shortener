@@ -36,22 +36,11 @@ public class IdGenerator implements IdGeneratorPort {
     }
     
     @Override
-    public String generateId(String input, int length) {
-        // Ignoring input parameter for Snowflake algorithm
-        // Using length as a hint for formatting if needed
-        
-        long id = nextId();
-        String stringId = String.valueOf(id);
-        
-        // If length is specified and valid, adjust the string representation
-        if (length > 0 && stringId.length() > length) {
-            // Truncate to required length
-            return stringId.substring(0, length);
-        }
-        
-        return stringId;
+    public String generateId(String input) {
+        var id = nextId();
+        return String.valueOf(id);
     }
-    
+
     /**
      * Generate the next unique ID using Snowflake algorithm
      */
