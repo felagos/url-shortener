@@ -4,6 +4,7 @@ import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.exceptions.UrlNotFoundException;
 import com.shortener.url_shortener.domain.port.ConfigurationPort;
 import com.shortener.url_shortener.domain.port.HashingServicePort;
+import com.shortener.url_shortener.domain.port.IdGeneratorPort;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
 import org.springframework.stereotype.Service;
 
@@ -18,14 +19,19 @@ public class UrlShortenUseCase {
     private final String domainShortener;
     private final UrlRepositoryPort urlRepository;
     private final HashingServicePort hashingService;
+    private final IdGeneratorPort idGenerator;
+
+    private static final Integer HASH_LENGTH = 7;
 
     public UrlShortenUseCase(
             UrlRepositoryPort urlRepository,
             HashingServicePort hashingService,
-            ConfigurationPort configurationPort) {
+            ConfigurationPort configurationPort,
+            IdGeneratorPort idGenerator) {
         this.urlRepository = urlRepository;
         this.hashingService = hashingService;
         this.domainShortener = configurationPort.getString("domain-shortener");
+        this.idGenerator = idGenerator;
     }
 
     /**
@@ -38,10 +44,11 @@ public class UrlShortenUseCase {
         Optional<Url> existingUrl = urlRepository.findByOriginalUrl(originalUrl);
         
         if (existingUrl.isPresent()) {
-            return domainShortener + "/" + existingUrl.get().getShortUrl();
+           return domainShortener + "/" + existingUrl.get().getShortUrl();
         }
 
-        String hash = hashingService.hash(originalUrl);
+        var randomId = idGenerator.generateId(originalUrl, HASH_LENGTH);
+        String hash = hashingService.hash(randomId);
         Url newUrl = new Url(originalUrl, hash);
         urlRepository.save(newUrl);
         
