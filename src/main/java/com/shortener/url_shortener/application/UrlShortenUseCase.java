@@ -54,17 +54,4 @@ public class UrlShortenUseCase {
         return domainShortener + "/" + hash;
     }
 
-    /**
-     * Retrieves the original URL associated with a given hash.
-     *
-     * @param hash The shortened URL hash to look up
-     * @return The original URL string that corresponds to the hash
-     * @throws UrlNotFoundException if no URL is found for the given hash
-     */
-    public String getOriginalUrl(String hash) {
-        Optional<Url> url = urlRepository.findByShortUrl(hash);
-
-        return url.map((el) -> el.getOriginalUrl())
-                .orElseThrow(() -> new UrlNotFoundException("URL with hash " + hash + " not found", 404));
-    }
 }
