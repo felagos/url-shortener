@@ -9,11 +9,11 @@ import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
 
 @Service
-public class RedirectUrlUseCase {
+public class GetUrlUseCase {
 
     private final UrlRepositoryPort urlRepository;
 
-    public RedirectUrlUseCase(UrlRepositoryPort urlRepository) {
+    public GetUrlUseCase(UrlRepositoryPort urlRepository) {
         this.urlRepository = urlRepository;
     }
 

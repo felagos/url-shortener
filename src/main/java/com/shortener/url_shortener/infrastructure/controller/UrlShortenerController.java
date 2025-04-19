@@ -1,6 +1,6 @@
 package com.shortener.url_shortener.infrastructure.controller;
 
-import com.shortener.url_shortener.application.RedirectUrlUseCase;
+import com.shortener.url_shortener.application.GetUrlUseCase;
 import com.shortener.url_shortener.application.UrlShortenUseCase;
 import com.shortener.url_shortener.domain.exceptions.UrlNotFoundException;
 import com.shortener.url_shortener.infrastructure.dto.ShortenUrlDto;
@@ -17,11 +17,11 @@ import org.springframework.web.servlet.view.RedirectView;
 public class UrlShortenerController {
 
     private final UrlShortenUseCase urlShortenerService;
-    private final RedirectUrlUseCase redirectUrlService;
+    private final GetUrlUseCase getUrlUseCase;
 
-    public UrlShortenerController(UrlShortenUseCase urlShortenerService, RedirectUrlUseCase redirectUrlService) {
+    public UrlShortenerController(UrlShortenUseCase urlShortenerService, GetUrlUseCase getUrlUseCase) {
         this.urlShortenerService = urlShortenerService;
-        this.redirectUrlService = redirectUrlService;
+        this.getUrlUseCase = getUrlUseCase;
     }
 
     /**
@@ -44,7 +44,7 @@ public class UrlShortenerController {
      */
     @GetMapping("/{hash}")
     public RedirectView getOriginalUrl(@PathVariable String hash) {
-        String originalUrl = this.redirectUrlService.getOriginalUrl(hash);
+        String originalUrl = this.getUrlUseCase.getOriginalUrl(hash);
         
         RedirectView redirectView = new RedirectView(originalUrl);
         redirectView.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
