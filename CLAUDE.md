@@ -33,25 +33,26 @@ No linter is configured.
 
 Hexagonal (ports & adapters):
 
-- `domain/` — `Url` model, `BaseException` (carries an HTTP status code) and the ports: `UrlRepositoryPort`, `HashingServicePort`, `ConfigurationPort`. No framework dependencies.
+- `domain/` — `Url` model, `BaseException` (carries an HTTP status code) and the ports: `UrlRepositoryPort`, `ShortCodeGeneratorPort`, `ConfigurationPort`. No framework dependencies.
 - `application/` — one `@Service` per use case (`UrlShortenUseCase`, `GetUrlUseCase`), depending only on ports.
-- `infrastructure/` — adapters: REST controller, DynamoDB repository, short-code generation (`hashing/`), Spring config.
+- `infrastructure/` — adapters: REST controller, DynamoDB repositories, short-code generation (`generator/`), Spring config.
 
 Swapping a technology (e.g. the Mongo → DynamoDB migration) should only touch `infrastructure/`; keep use cases and ports unchanged.
 
 ### Request flow
 
-- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`, in a loop of up to `MAX_ATTEMPTS` (5): look up the original URL (strongly consistent) and return its code if stored; otherwise `HashingServiceAdapter` generates a random 7-char base62 code (`UniqueId`, NanoId) and saves it. If the save conflicts (code taken, or another instance shortened the same URL first), the repository throws `UrlWriteConflictException` and the loop starts over, so the next lookup returns the winner's code. After 5 conflicts it fails with `ShortUrlGenerationException` (503). Returns `{domain-shortener}/{code}` as plain text.
-- Instances share no state: both "one code → one URL" and "one URL → one code" are enforced by DynamoDB conditional writes in a single transaction, so the API scales horizontally without coordination. Don't reintroduce counters, Snowflake worker ids, check-then-act without a conditional write, or GSI lookups for uniqueness.
+- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`, in a loop of up to `MAX_ATTEMPTS` (5): look up the original URL (strongly consistent) and return its code if stored; otherwise get a new code from `ShortCodeGeneratorPort` and save it. If the save conflicts (another instance shortened the same URL first, or the code is taken), the repository throws `UrlWriteConflictException` and the loop starts over, so the next lookup returns the winner's code. After 5 conflicts it fails with `ShortUrlGenerationException` (503). Returns `{domain-shortener}/{code}` as plain text.
+- **Code generation is coordinated by ranges** (`infrastructure/generator/`): `RangeAllocator` reserves blocks of `shortener.block-size` numbers from a shared counter (`DynamoDbBlockSource`, atomic `ADD` on the `counters` table) and serves them from memory, so instances never produce the same number. `RangeShortCodeGenerator` scrambles each number with `FeistelPermutation` (keyed bijection on [0, 62⁷)) and encodes it as 7 base62 chars, so codes are unique but not sequential.
+- `shortener.code-secret` (env `SHORTENER_CODESECRET`) is the permutation key: it must be identical on every instance and **must never change** once codes exist, or new codes can repeat old ones.
+- The conditional writes stay as a safety net: a conflict on the `urls` condition should never happen and is logged as `WARN`. Don't remove them, and don't reintroduce check-then-act without a conditional write or GSI lookups for uniqueness.
 - `GET /shortener/{hash}` → `GetUrlUseCase` → 301 redirect to the original URL. Missing hash throws `UrlNotFoundException`, which `GlobalExceptionHandler` maps to its status code (404) with the message as body.
 
 ### Persistence
 
-Two tables written together in one `TransactWriteItems`: `urls` (short code → original URL, for redirects) and `original_urls` (SHA-256 of the original URL → short code, for deduplication). Details, design rationale and how to inspect them: [docs/persistence.md](docs/persistence.md).
+Two tables written together in one `TransactWriteItems`: `urls` (short code → original URL, for redirects) and `original_urls` (SHA-256 of the original URL → short code, for deduplication). A third table, `counters`, holds the range coordinator's counter. Details, design rationale and how to inspect them: [docs/persistence.md](docs/persistence.md).
 
 ## Gotchas
 
 - `ShortenUrlDto`'s URL regex rejects query strings (`?q=...`) and hosts without a subdomain (`https://google.com`); both return 400.
-- `HashingServicePort.hash(input)` ignores its input: codes are random, not derived from the URL.
-- `HashingFactory` is a hand-rolled singleton, not a Spring bean.
-- `UrlShortenerApplicationTests.contextLoads` runs with `dynamodb.create-table=false` so it doesn't need DynamoDB running; the other tests are plain unit tests with Mockito.
+- Numbers left in a block when an instance stops are never used: the counter has gaps by design, never duplicates. Each reservation is logged as `Reserved short code block [start, end)`.
+- `UrlShortenerApplicationTests.contextLoads` runs with `dynamodb.create-table=false` so it doesn't need DynamoDB running (blocks are reserved lazily, on the first code); the other tests are plain unit tests.

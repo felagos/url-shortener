@@ -20,6 +20,7 @@ services:
       - DYNAMODB_ENDPOINT=http://url-shortener-dynamodb:8000
       - DYNAMODB_REGION=us-east-1
       - DYNAMODB_CREATETABLE=true
+      - SHORTENER_CODESECRET=${SHORTENER_CODESECRET:-dev-only-secret-change-me}
     depends_on:
       - url-shortener-dynamodb
     deploy:

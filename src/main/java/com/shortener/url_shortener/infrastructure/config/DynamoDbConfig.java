@@ -1,5 +1,6 @@
 package com.shortener.url_shortener.infrastructure.config;
 
+import com.shortener.url_shortener.infrastructure.repository.CounterItem;
 import com.shortener.url_shortener.infrastructure.repository.OriginalUrlItem;
 import com.shortener.url_shortener.infrastructure.repository.UrlItem;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ public class DynamoDbConfig {
 
     private static final String URLS_TABLE = "urls";
     private static final String ORIGINAL_URLS_TABLE = "original_urls";
+    private static final String COUNTERS_TABLE = "counters";
 
     @Bean
     public DynamoDbClient dynamoDbClient(
@@ -69,6 +71,21 @@ public class DynamoDbConfig {
 
         DynamoDbTable<OriginalUrlItem> table =
                 enhancedClient.table(ORIGINAL_URLS_TABLE, TableSchema.fromBean(OriginalUrlItem.class));
+
+        if (createTable) {
+            createIfMissing(client, table);
+        }
+
+        return table;
+    }
+
+    @Bean
+    public DynamoDbTable<CounterItem> counterTable(
+            DynamoDbEnhancedClient enhancedClient,
+            DynamoDbClient client,
+            @Value("${dynamodb.create-table:false}") boolean createTable) {
+
+        DynamoDbTable<CounterItem> table = enhancedClient.table(COUNTERS_TABLE, TableSchema.fromBean(CounterItem.class));
 
         if (createTable) {
             createIfMissing(client, table);

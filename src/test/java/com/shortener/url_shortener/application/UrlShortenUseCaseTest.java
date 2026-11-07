@@ -4,7 +4,7 @@ import com.shortener.url_shortener.domain.exceptions.ShortUrlGenerationException
 import com.shortener.url_shortener.domain.exceptions.UrlWriteConflictException;
 import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.ConfigurationPort;
-import com.shortener.url_shortener.domain.port.HashingServicePort;
+import com.shortener.url_shortener.domain.port.ShortCodeGeneratorPort;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,18 +22,18 @@ class UrlShortenUseCaseTest {
     private static final String ORIGINAL = "https://www.example.com/page";
 
     private UrlRepositoryPort repository;
-    private HashingServicePort hashing;
+    private ShortCodeGeneratorPort generator;
     private UrlShortenUseCase useCase;
 
     @BeforeEach
     void setUp() {
         repository = mock(UrlRepositoryPort.class);
-        hashing = mock(HashingServicePort.class);
+        generator = mock(ShortCodeGeneratorPort.class);
         ConfigurationPort config = mock(ConfigurationPort.class);
         when(config.getString("domain-shortener")).thenReturn(DOMAIN);
         when(repository.findByOriginalUrl(ORIGINAL)).thenReturn(Optional.empty());
 
-        useCase = new UrlShortenUseCase(repository, hashing, config);
+        useCase = new UrlShortenUseCase(repository, generator, config);
     }
 
     @Test
@@ -46,7 +46,7 @@ class UrlShortenUseCaseTest {
 
     @Test
     void retriesWithNewCodeWhenCodeIsTaken() {
-        when(hashing.hash(ORIGINAL)).thenReturn("taken01", "free002");
+        when(generator.generate()).thenReturn("taken01", "free002");
         when(repository.save(any()))
                 .thenThrow(new UrlWriteConflictException("taken01"))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -61,7 +61,7 @@ class UrlShortenUseCaseTest {
         when(repository.findByOriginalUrl(ORIGINAL))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(new Url("other01", ORIGINAL, "other01")));
-        when(hashing.hash(ORIGINAL)).thenReturn("mine001");
+        when(generator.generate()).thenReturn("mine001");
         when(repository.save(any())).thenThrow(new UrlWriteConflictException("mine001"));
 
         assertThat(useCase.shortenUrl(ORIGINAL)).isEqualTo(DOMAIN + "/other01");
@@ -70,7 +70,7 @@ class UrlShortenUseCaseTest {
 
     @Test
     void failsWith503AfterMaxAttempts() {
-        when(hashing.hash(ORIGINAL)).thenReturn("taken01");
+        when(generator.generate()).thenReturn("taken01");
         when(repository.save(any())).thenThrow(new UrlWriteConflictException("taken01"));
 
         assertThatThrownBy(() -> useCase.shortenUrl(ORIGINAL))

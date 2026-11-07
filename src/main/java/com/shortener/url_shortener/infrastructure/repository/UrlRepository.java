@@ -3,6 +3,8 @@ package com.shortener.url_shortener.infrastructure.repository;
 import com.shortener.url_shortener.domain.exceptions.UrlWriteConflictException;
 import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -27,6 +29,8 @@ import java.util.Set;
  */
 @Repository
 public class UrlRepository implements UrlRepositoryPort {
+
+    private static final Logger log = LoggerFactory.getLogger(UrlRepository.class);
 
     // Cancellation reasons meaning "someone else wrote this data first"
     private static final Set<String> CONFLICT_REASONS = Set.of("ConditionalCheckFailed", "TransactionConflict");
@@ -68,9 +72,16 @@ public class UrlRepository implements UrlRepositoryPort {
                             .build())
                     .build());
         } catch (TransactionCanceledException e) {
-            boolean conflict = e.cancellationReasons().stream()
+            var reasons = e.cancellationReasons();
+            boolean conflict = reasons.stream()
                     .map(CancellationReason::code)
                     .anyMatch(CONFLICT_REASONS::contains);
+
+            // Codes come from coordinated ranges, so a taken code means a misconfiguration
+            // (e.g. the permutation key changed) rather than normal contention
+            if ("ConditionalCheckFailed".equals(reasons.get(0).code())) {
+                log.warn("Short URL {} was already taken; codes should never repeat", url.getShortUrl());
+            }
 
             if (conflict) {
                 throw new UrlWriteConflictException("Conflict saving short URL " + url.getShortUrl());

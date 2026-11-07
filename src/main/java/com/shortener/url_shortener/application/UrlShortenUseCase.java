@@ -4,7 +4,7 @@ import com.shortener.url_shortener.domain.exceptions.ShortUrlGenerationException
 import com.shortener.url_shortener.domain.exceptions.UrlWriteConflictException;
 import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.ConfigurationPort;
-import com.shortener.url_shortener.domain.port.HashingServicePort;
+import com.shortener.url_shortener.domain.port.ShortCodeGeneratorPort;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
 import org.springframework.stereotype.Service;
 
@@ -20,14 +20,14 @@ public class UrlShortenUseCase {
 
     private final String domainShortener;
     private final UrlRepositoryPort urlRepository;
-    private final HashingServicePort hashingService;
+    private final ShortCodeGeneratorPort shortCodeGenerator;
 
     public UrlShortenUseCase(
             UrlRepositoryPort urlRepository,
-            HashingServicePort hashingService,
+            ShortCodeGeneratorPort shortCodeGenerator,
             ConfigurationPort configurationPort) {
         this.urlRepository = urlRepository;
-        this.hashingService = hashingService;
+        this.shortCodeGenerator = shortCodeGenerator;
         this.domainShortener = configurationPort.getString("domain-shortener");
     }
 
@@ -48,11 +48,11 @@ public class UrlShortenUseCase {
                return domainShortener + "/" + existingUrl.get().getShortUrl();
             }
 
-            var hash = hashingService.hash(originalUrl);
+            var code = shortCodeGenerator.generate();
 
             try {
-                urlRepository.save(new Url(originalUrl, hash));
-                return domainShortener + "/" + hash;
+                urlRepository.save(new Url(originalUrl, code));
+                return domainShortener + "/" + code;
             } catch (UrlWriteConflictException e) {
                 // Someone wrote first: the next lookup returns their code, or we try a new one
             }
