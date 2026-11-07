@@ -1,19 +1,29 @@
-version: '3.8'
-
 services:
-  url-shortener-mongodb:
-    image: mongo:latest
-    container_name: url-shortener-mongodb
+  url-shortener-dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: url-shortener-dynamodb
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    user: root
     ports:
-      - "27017:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-      - MONGO_INITDB_DATABASE=url_shortener
+      - "8042:8000"
     volumes:
-      - mongodb_data:/data/db
+      - dynamodb_data:/home/dynamodblocal/data
+    restart: unless-stopped
+
+  url-shortener-api:
+    build: .
+    container_name: url-shortener-api
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      # Inside the compose network DynamoDB listens on its container port
+      - DYNAMODB_ENDPOINT=http://url-shortener-dynamodb:8000
+      - DYNAMODB_REGION=us-east-1
+      - DYNAMODB_CREATETABLE=true
+    depends_on:
+      - url-shortener-dynamodb
     restart: unless-stopped
 
 volumes:
-  mongodb_data:
+  dynamodb_data:
     driver: local
