@@ -38,6 +38,21 @@ UpdateItem counters{name: "shortUrl"}  ADD next :1000  ReturnValues UPDATED_NEW 
 
 If the transaction is cancelled because a condition failed (the URL already has a code, or the code is taken) or because of a `TransactionConflict` with a concurrent transaction, the repository throws the domain `UrlWriteConflictException`. `UrlShortenUseCase` then repeats the lookup and, if the URL is still missing, retries with the next code (up to 5 attempts, then 503). A failed condition on `urls` means a code was repeated, which coordinated ranges should make impossible, so it is logged as `WARN`.
 
+## Read cache (Redis)
+
+`CachingUrlRepository` (`@Primary`) decorates `UrlRepository` and is what the use cases receive as `UrlRepositoryPort`.
+
+| Key | Value | Written when |
+|---|---|---|
+| `url:code:{shortUrl}` | original URL | After a successful `save`, or on a `findByShortUrl` miss that found the item |
+| `url:orig:{sha256(originalUrl)}` | short URL | After a successful `save`, or on a `findByOriginalUrl` miss that found the item |
+
+- **No invalidation needed:** both mappings are immutable once saved, so a cached entry can never be stale. `cache.ttl` (default 24 h) and Redis' `allkeys-lru` policy only bound memory. If deleting or editing URLs is ever added, the cache must be invalidated there.
+- **Absences are never cached:** a code or URL missing now may be created an instant later by another instance (the code may sit in another replica's block).
+- **Only after a successful save:** a save that throws `UrlWriteConflictException` writes nothing to Redis.
+- **Redis is not a source of truth:** the uniqueness guarantees (conditional transaction) and the range counter stay in DynamoDB. Redis runs without persistence; a restart just empties the cache.
+- **Fail-open:** any Redis error falls back to DynamoDB. After a failure Redis is skipped for 5 s, so an outage costs one 200 ms timeout per instance and window instead of one per request; one `WARN` is logged when Redis becomes unavailable and one `INFO` when it is back. `management.health.redis.enabled=false` keeps an unavailable Redis from making instances unhealthy.
+
 ## Design notes
 
 - **Why a second table instead of a GSI:** GSIs only support eventually consistent reads, and a lookup followed by a write is not atomic. With a GSI, two instances shortening the same new URL at once both created a code (reproduced). A base table key gives a conditional write to enforce uniqueness and a strongly consistent read to look it up.

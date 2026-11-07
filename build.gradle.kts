@@ -22,6 +22,7 @@ dependencies {
 	implementation("software.amazon.awssdk:dynamodb-enhanced")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.boot:spring-boot-starter-validation:3.4.4")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

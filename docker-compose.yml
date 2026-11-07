@@ -10,6 +10,20 @@ services:
       - dynamodb_data:/home/dynamodblocal/data
     restart: unless-stopped
 
+  # Read cache only: no persistence, evicts least recently used keys when full
+  url-shortener-redis:
+    image: redis:7.4.1-alpine
+    container_name: url-shortener-redis
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   # Replicas have no published port: they are only reachable through nginx
   url-shortener-api:
     build: .
@@ -21,8 +35,13 @@ services:
       - DYNAMODB_REGION=us-east-1
       - DYNAMODB_CREATETABLE=true
       - SHORTENER_CODESECRET=${SHORTENER_CODESECRET:-dev-only-secret-change-me}
+      - SPRING_DATA_REDIS_HOST=url-shortener-redis
     depends_on:
-      - url-shortener-dynamodb
+      url-shortener-dynamodb:
+        condition: service_started
+      # Not service_healthy: the API works without Redis (reads fall back to DynamoDB)
+      url-shortener-redis:
+        condition: service_started
     deploy:
       replicas: ${API_REPLICAS:-3}
     healthcheck:

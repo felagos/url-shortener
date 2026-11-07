@@ -16,10 +16,6 @@ import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhanced
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.Optional;
 import java.util.Set;
 
@@ -55,7 +51,7 @@ public class UrlRepository implements UrlRepositoryPort {
         urlItem.setOriginalUrl(url.getOriginalUrl());
 
         OriginalUrlItem originalUrlItem = new OriginalUrlItem();
-        originalUrlItem.setOriginalUrlHash(sha256(url.getOriginalUrl()));
+        originalUrlItem.setOriginalUrlHash(UrlHashing.sha256(url.getOriginalUrl()));
         originalUrlItem.setOriginalUrl(url.getOriginalUrl());
         originalUrlItem.setShortUrl(url.getShortUrl());
 
@@ -95,7 +91,7 @@ public class UrlRepository implements UrlRepositoryPort {
     @Override
     public Optional<Url> findByOriginalUrl(String originalUrl) {
         OriginalUrlItem item = originalUrlTable.getItem(GetItemEnhancedRequest.builder()
-                .key(Key.builder().partitionValue(sha256(originalUrl)).build())
+                .key(Key.builder().partitionValue(UrlHashing.sha256(originalUrl)).build())
                 .consistentRead(true)
                 .build());
 
@@ -122,14 +118,5 @@ public class UrlRepository implements UrlRepositoryPort {
 
     private static Expression notExists(String attribute) {
         return Expression.builder().expression("attribute_not_exists(" + attribute + ")").build();
-    }
-
-    private static String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }
