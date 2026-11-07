@@ -22,9 +22,11 @@ No linter is configured.
 
 ## Local environment
 
-- `docker-compose.yml` runs `url-shortener-dynamodb` (DynamoDB Local, host port **8042**, data persisted in the `dynamodb_data` volume) and `url-shortener-api` (built from the two-stage `Dockerfile`).
-- The API's host port comes from `APP_PORT` (default 8080). On this machine 8000, 8001 and 8080 are often taken by other projects' containers, so use e.g. `APP_PORT=8090 make up`.
+- `docker-compose.yml` runs DynamoDB Local (host port **8042**, `dynamodb_data` volume), `${API_REPLICAS:-3}` replicas of `url-shortener-api` (two-stage `Dockerfile`) and `url-shortener-nginx` as the load balancer and only entry point, on `APP_PORT` (default 8080). Replicas have no published port. Details (nginx config, scaling, failover): [docs/deployment.md](docs/deployment.md).
+- On this machine 8000, 8001 and 8080 are often taken by other projects' containers, so use e.g. `APP_PORT=8090 make up`.
+- `make scale N=5` changes the replica count live; nginx picks up the new replicas without a restart. `make logs-lb` shows which replica served each request.
 - Running with `bootRun` uses `application.properties` (`dynamodb.endpoint=http://localhost:8042`). Inside compose the API reaches DynamoDB at `http://url-shortener-dynamodb:8000` via env vars (`DYNAMODB_ENDPOINT`, `DYNAMODB_REGION`, `DYNAMODB_CREATETABLE`) that override the properties through Spring relaxed binding.
+- `/actuator/health` is exposed only for the compose healthcheck; nginx proxies just `/shortener`, so it is not reachable from outside.
 - For real AWS, leave `dynamodb.endpoint` empty: the client then uses the default AWS credential chain instead of the dummy `local` credentials.
 
 ## Architecture

@@ -21,6 +21,7 @@ dependencies {
 	implementation(platform("software.amazon.awssdk:bom:2.29.52"))
 	implementation("software.amazon.awssdk:dynamodb-enhanced")
 	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation:3.4.4")
 	implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
 

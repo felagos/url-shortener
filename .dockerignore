@@ -7,4 +7,5 @@ build
 out
 *.iml
 docker-compose.yml
+nginx
 Makefile
