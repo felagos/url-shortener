@@ -1,5 +1,6 @@
 package com.shortener.url_shortener.domain.port;
 
+import com.shortener.url_shortener.domain.exceptions.ShortUrlAlreadyExistsException;
 import com.shortener.url_shortener.domain.model.Url;
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ public interface UrlRepositoryPort {
      * 
      * @param url The URL entity to save
      * @return The saved URL entity
+     * @throws ShortUrlAlreadyExistsException if the short URL is already taken
      */
     Url save(Url url);
     

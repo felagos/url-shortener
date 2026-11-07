@@ -31,15 +31,16 @@ No linter is configured.
 
 Hexagonal (ports & adapters):
 
-- `domain/` — `Url` model, `BaseException` (carries an HTTP status code) and the ports: `UrlRepositoryPort`, `HashingServicePort`, `IdGeneratorPort`, `ConfigurationPort`. No framework dependencies.
+- `domain/` — `Url` model, `BaseException` (carries an HTTP status code) and the ports: `UrlRepositoryPort`, `HashingServicePort`, `ConfigurationPort`. No framework dependencies.
 - `application/` — one `@Service` per use case (`UrlShortenUseCase`, `GetUrlUseCase`), depending only on ports.
-- `infrastructure/` — adapters: REST controller, DynamoDB repository, Snowflake ID generator, hashing, Spring config.
+- `infrastructure/` — adapters: REST controller, DynamoDB repository, short-code generation (`hashing/`), Spring config.
 
 Swapping a technology (e.g. the Mongo → DynamoDB migration) should only touch `infrastructure/`; keep use cases and ports unchanged.
 
 ### Request flow
 
-- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`: returns the existing short code if the original URL is already stored; otherwise `IdGenerator` (Snowflake, worker id 1) produces a numeric id, `HashingServiceAdapter` turns it into a 7-char Base62 code, saves it, and returns `{domain-shortener}/{code}` as plain text.
+- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`: returns the existing short code if the original URL is already stored; otherwise `HashingServiceAdapter` generates a random 7-char base62 code (`UniqueId`, NanoId) and saves it. If the code is taken, the repository throws `ShortUrlAlreadyExistsException` and the use case retries with a new code up to `MAX_ATTEMPTS` (5), then fails with `ShortUrlGenerationException` (503). Returns `{domain-shortener}/{code}` as plain text.
+- Codes are random and uniqueness is enforced by DynamoDB's conditional put, so instances share no state and the API scales horizontally without coordination. Don't reintroduce counters, Snowflake worker ids, or anything derived from per-instance state.
 - `GET /shortener/{hash}` → `GetUrlUseCase` → 301 redirect to the original URL. Missing hash throws `UrlNotFoundException`, which `GlobalExceptionHandler` maps to its status code (404) with the message as body.
 
 ### Persistence
@@ -49,6 +50,6 @@ Single table `urls` keyed by the short code, plus a GSI on a SHA-256 of the orig
 ## Gotchas
 
 - `ShortenUrlDto`'s URL regex rejects query strings (`?q=...`) and hosts without a subdomain (`https://google.com`); both return 400.
-- `Base62` truncates to 7 characters, so different ids can collide. `UrlRepository.save` uses `attribute_not_exists(shortUrl)`, so a collision surfaces as a `ConditionalCheckFailedException` (currently unhandled → 500) instead of overwriting.
-- `HashingFactory` is a hand-rolled singleton, not a Spring bean; `HashingType.UNIQUE_ID` (random NanoId) exists but is unused.
-- The only test is `contextLoads`, run with `dynamodb.create-table=false` so it doesn't need DynamoDB running.
+- `HashingServicePort.hash(input)` ignores its input: codes are random, not derived from the URL.
+- `HashingFactory` is a hand-rolled singleton, not a Spring bean.
+- `UrlShortenerApplicationTests.contextLoads` runs with `dynamodb.create-table=false` so it doesn't need DynamoDB running; the other tests are plain unit tests with Mockito.

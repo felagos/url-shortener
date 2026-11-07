@@ -9,7 +9,6 @@ public class HashingFactory {
 
     private HashingFactory() {
         this.hashers = Map.of(
-                HashingType.BASE62, new Base62(),
                 HashingType.UNIQUE_ID, new UniqueId()
         );
     }

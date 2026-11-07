@@ -1,5 +1,6 @@
 package com.shortener.url_shortener.infrastructure.repository;
 
+import com.shortener.url_shortener.domain.exceptions.ShortUrlAlreadyExistsException;
 import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.UrlRepositoryPort;
 import org.springframework.stereotype.Repository;
@@ -8,6 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -36,12 +38,16 @@ public class UrlRepository implements UrlRepositoryPort {
         item.setOriginalUrlHash(sha256(url.getOriginalUrl()));
 
         // Never overwrite an existing short URL
-        table.putItem(PutItemEnhancedRequest.builder(UrlItem.class)
-                .item(item)
-                .conditionExpression(Expression.builder()
-                        .expression("attribute_not_exists(shortUrl)")
-                        .build())
-                .build());
+        try {
+            table.putItem(PutItemEnhancedRequest.builder(UrlItem.class)
+                    .item(item)
+                    .conditionExpression(Expression.builder()
+                            .expression("attribute_not_exists(shortUrl)")
+                            .build())
+                    .build());
+        } catch (ConditionalCheckFailedException e) {
+            throw new ShortUrlAlreadyExistsException(url.getShortUrl());
+        }
 
         return toDomain(item);
     }

@@ -22,13 +22,14 @@ Billing mode is on-demand (default of the Enhanced Client `createTable`).
 |---|---|
 | `findByShortUrl` | `GetItem` by `shortUrl` |
 | `findByOriginalUrl` | `Query` on `originalUrlHash-index`, then filters by exact `originalUrl` to discard SHA-256 collisions |
-| `save` | `PutItem` with condition `attribute_not_exists(shortUrl)` |
+| `save` | `PutItem` with condition `attribute_not_exists(shortUrl)`; a failed condition (`ConditionalCheckFailedException`) is rethrown as the domain `ShortUrlAlreadyExistsException`, and `UrlShortenUseCase` retries with a new random code |
 
 ## Design notes
 
 - The GSI is keyed by a hash instead of the raw URL because index key values are limited to 2048 bytes and URLs can be longer.
 - GSIs are eventually consistent: two concurrent requests for the same new URL may each create a code. Both codes redirect correctly, so this is accepted.
 - The domain `Url.id` is set to the short code; there is no separate generated id.
+- The conditional put is the only uniqueness guarantee for short codes, which is what lets multiple API instances generate codes independently. With 62⁷ ≈ 3.5·10¹² possible codes, the chance that one insert collides is N / 3.5·10¹² for N stored URLs.
 
 ## Inspecting the local table
 

@@ -5,12 +5,14 @@ import java.security.SecureRandom;
 
 public class UniqueId implements IHashing {
 
-    private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private static final char[] ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
+    private static final int LENGTH = 7;
+    // SecureRandom is thread-safe, so one instance is shared across requests
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Override
     public String hash(String input) {
-        var random = new SecureRandom();
-        return NanoIdUtils.randomNanoId(random, ALPHABET.toCharArray(), 7);
+        return NanoIdUtils.randomNanoId(RANDOM, ALPHABET, LENGTH);
     }
 
 }

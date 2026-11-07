@@ -17,6 +17,6 @@ public class HashingServiceAdapter implements HashingServicePort {
 
     @Override
     public String hash(String input) {
-        return hashingFactory.getHasher(HashingType.BASE62).hash(input);
+        return hashingFactory.getHasher(HashingType.UNIQUE_ID).hash(input);
     }
 }
