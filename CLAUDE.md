@@ -39,13 +39,13 @@ Swapping a technology (e.g. the Mongo → DynamoDB migration) should only touch 
 
 ### Request flow
 
-- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`: returns the existing short code if the original URL is already stored; otherwise `HashingServiceAdapter` generates a random 7-char base62 code (`UniqueId`, NanoId) and saves it. If the code is taken, the repository throws `ShortUrlAlreadyExistsException` and the use case retries with a new code up to `MAX_ATTEMPTS` (5), then fails with `ShortUrlGenerationException` (503). Returns `{domain-shortener}/{code}` as plain text.
-- Codes are random and uniqueness is enforced by DynamoDB's conditional put, so instances share no state and the API scales horizontally without coordination. Don't reintroduce counters, Snowflake worker ids, or anything derived from per-instance state.
+- `POST /shortener` `{"url": ...}` → `UrlShortenUseCase.shortenUrl`, in a loop of up to `MAX_ATTEMPTS` (5): look up the original URL (strongly consistent) and return its code if stored; otherwise `HashingServiceAdapter` generates a random 7-char base62 code (`UniqueId`, NanoId) and saves it. If the save conflicts (code taken, or another instance shortened the same URL first), the repository throws `UrlWriteConflictException` and the loop starts over, so the next lookup returns the winner's code. After 5 conflicts it fails with `ShortUrlGenerationException` (503). Returns `{domain-shortener}/{code}` as plain text.
+- Instances share no state: both "one code → one URL" and "one URL → one code" are enforced by DynamoDB conditional writes in a single transaction, so the API scales horizontally without coordination. Don't reintroduce counters, Snowflake worker ids, check-then-act without a conditional write, or GSI lookups for uniqueness.
 - `GET /shortener/{hash}` → `GetUrlUseCase` → 301 redirect to the original URL. Missing hash throws `UrlNotFoundException`, which `GlobalExceptionHandler` maps to its status code (404) with the message as body.
 
 ### Persistence
 
-Single table `urls` keyed by the short code, plus a GSI on a SHA-256 of the original URL used for deduplication. Details, design rationale and how to inspect the table: [docs/persistence.md](docs/persistence.md).
+Two tables written together in one `TransactWriteItems`: `urls` (short code → original URL, for redirects) and `original_urls` (SHA-256 of the original URL → short code, for deduplication). Details, design rationale and how to inspect them: [docs/persistence.md](docs/persistence.md).
 
 ## Gotchas
 

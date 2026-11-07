@@ -1,7 +1,7 @@
 package com.shortener.url_shortener.application;
 
-import com.shortener.url_shortener.domain.exceptions.ShortUrlAlreadyExistsException;
 import com.shortener.url_shortener.domain.exceptions.ShortUrlGenerationException;
+import com.shortener.url_shortener.domain.exceptions.UrlWriteConflictException;
 import com.shortener.url_shortener.domain.model.Url;
 import com.shortener.url_shortener.domain.port.ConfigurationPort;
 import com.shortener.url_shortener.domain.port.HashingServicePort;
@@ -45,10 +45,10 @@ class UrlShortenUseCaseTest {
     }
 
     @Test
-    void retriesWithNewCodeOnCollision() {
+    void retriesWithNewCodeWhenCodeIsTaken() {
         when(hashing.hash(ORIGINAL)).thenReturn("taken01", "free002");
         when(repository.save(any()))
-                .thenThrow(new ShortUrlAlreadyExistsException("taken01"))
+                .thenThrow(new UrlWriteConflictException("taken01"))
                 .thenAnswer(inv -> inv.getArgument(0));
 
         assertThat(useCase.shortenUrl(ORIGINAL)).isEqualTo(DOMAIN + "/free002");
@@ -56,9 +56,22 @@ class UrlShortenUseCaseTest {
     }
 
     @Test
+    void returnsCodeSavedByAnotherInstanceWhenLosingTheRace() {
+        // Nothing stored on the first lookup; another instance saves the same URL before us
+        when(repository.findByOriginalUrl(ORIGINAL))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(new Url("other01", ORIGINAL, "other01")));
+        when(hashing.hash(ORIGINAL)).thenReturn("mine001");
+        when(repository.save(any())).thenThrow(new UrlWriteConflictException("mine001"));
+
+        assertThat(useCase.shortenUrl(ORIGINAL)).isEqualTo(DOMAIN + "/other01");
+        verify(repository, times(1)).save(any());
+    }
+
+    @Test
     void failsWith503AfterMaxAttempts() {
         when(hashing.hash(ORIGINAL)).thenReturn("taken01");
-        when(repository.save(any())).thenThrow(new ShortUrlAlreadyExistsException("taken01"));
+        when(repository.save(any())).thenThrow(new UrlWriteConflictException("taken01"));
 
         assertThatThrownBy(() -> useCase.shortenUrl(ORIGINAL))
                 .isInstanceOf(ShortUrlGenerationException.class)
